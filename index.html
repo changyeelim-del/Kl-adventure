@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KL 打工冒险</title>
+  <style>
+    :*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Microsoft YaHei",sans-serif;background:#08111f;color:#fff}button{font:inherit}.app{max-width:1100px;margin:auto;padding:16px}.top{display:flex;justify-content:space-between;align-items:center}.brand{font-size:24px;font-weight:900}.brand span{color:#feca57}.hud{display:flex;gap:8px}.pill{background:#14233a;border:1px solid #263a5a;border-radius:999px;padding:8px 12px}.game{margin-top:14px;border:2px solid #263a5a;border-radius:18px;overflow:hidden;background:#101c2e}.stage{position:relative;height:360px;background:linear-gradient(#50a7ff 0 55%,#e98 55% 62%,#263f5a 62%)}.stage:before{content:"";position:absolute;left:0;right:0;bottom:0;height:38%;background:linear-gradient(90deg,#263f5a 50%,#1e334b 50%);background-size:90px 100%}.sun{position:absolute;width:54px;height:54px;border-radius:50%;background:#ffe066;right:50px;top:32px}.building{position:absolute;bottom:38%;width:110px;height:110px;background:#f2efe5;border:6px solid #d9d8d0}.building.a{left:12%}.building.b{right:26%;height:150px}.player{position:absolute;z-index:4;left:12%;bottom:28%;width:44px;height:70px;border-radius:18px 18px 8px 8px;background:#ff6b6b;transition:bottom .12s}.player:before{content:"";position:absolute;width:34px;height:34px;border-radius:50%;background:#deb887;left:5px;top:-26px}.player.jump{bottom:48%}.obstacle{position:absolute;z-index:3;bottom:28%;width:48px;height:48px;border-radius:8px;background:#111;color:#fff;text-align:center;line-height:48px;font-size:24px}.road-line{position:absolute;z-index:2;bottom:14%;width:100px;border-top:5px dashed #d8dfea}.score-pop{position:absolute;z-index:5;color:#ffe66d;font-size:22px;font-weight:900}.controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:12px}.controls button,.card-row button,.overlay button{border:0;border-radius:12px;padding:14px;font-weight:800;color:#fff;cursor:pointer}.jump-btn{background:#ff6b6b}.task-btn{background:#5f27cd}.card-btn{background:#10ac84}.card-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 12px 12px}.card-row button{background:#1a2d49;border:1px solid #375276}.overlay{position:absolute;z-index:10;inset:0;background:rgba(8,17,31,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}.overlay.hidden{display:none}.overlay h1{font-size:38px;margin:4px}.overlay p{max-width:560px;line-height:1.6}.overlay button{background:#feca57;color:#1e272e;font-size:18px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.stat{background:#14233a;padding:10px;border-radius:10px}.stat b{display:block;font-size:20px}.shake{animation:shake .25s}@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}@media(max-width:700px){.stage{height:300px}.controls{grid-template-columns:1fr 1fr}.card-row{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.top{align-items:flex-start}.hud{flex-wrap:wrap}.brand{font-size:19px}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="top"><div class="brand">KL <span>打工冒险</span></div><div class="hud"><div class="pill">分数 <b id="score">0</b></div><div class="pill">日期 <b id="day">1</b>/3</div><div class="pill">压力 <b id="stress">20</b></div></div></header>
+    <section class="game">
+      <div class="stage" id="stage">
+        <div class="sun"></div><div class="building a"></div><div class="building b"></div>
+        <div class="player" id="player"></div>
+        <div class="road-line" style="left:15%"></div><div class="road-line" style="left:70%"></div>
+        <div class="overlay" id="overlay"><h1>KL 打工冒险</h1><p>在三天内兼顾准时、工作和健康。跳过障碍、完成任务、选择合适的卡牌！</p><button id="start">开始上班</button></div>
+      </div>
+      <div class="controls"><button class="jump-btn" id="jump">跳跃 ↑</button><button class="task-btn" id="task">处理工作</button><button class="card-btn" id="shuffle">抽卡牌</button></div>
+      <div class="card-row" id="cards"></div>
+      <div class="stats"><div class="stat">准时率<b id="onTime">100%</b></div><div class="stat">健康<b id="health">100</b></div><div class="stat">完成任务<b id="tasks">0</b></div><div class="stat">金钱<b id="money">50</b></div></div>
+    </section>
+  </main>
+<script>
+const $=s=>document.querySelector(s),stage=$('#stage'),player=$('#player');let score=0,stress=20,health=100,money=50,tasks=0,day=1,on=false,spawnTimer,runnerTimer;
+const cardData=[{n:'Nasi Lemak',d:'健康 +12，压力 -8',fn(){health+=12;stress-=8}},{n:'LRT 快线',d:'压力 -12，金钱 -8',fn(){stress-=12;money-=8}},{n:'加班补贴',d:'任务 +2，压力 +15',fn(){tasks+=2;stress+=15}},{n:'咖啡充能',d:'金钱 -5，健康 +5',fn(){money-=5;health+=5}},{n:'会议请假',d:'压力 -18，准时率略降',fn(){stress-=18;money-=2}},{n:'远程办公',d:'压力 -10，任务 +1',fn(){stress-=10;tasks++}}];
+function clamp(){stress=Math.max(0,Math.min(100,stress));health=Math.max(0,Math.min(100,health));money=Math.max(0,money)}
+function update(){clamp();$('#score').textContent=score;$('#stress').textContent=stress;$('#health').textContent=health;$('#tasks').textContent=tasks;$('#money').textContent=money;$('#day').textContent=day;$('#onTime').textContent=Math.max(0,100-Math.floor(stress*.35))+'%'}
+function jump(){if(!on)return;player.classList.add('jump');setTimeout(()=>player.classList.remove('jump'),550)}
+function pop(text,x=150){const el=document.createElement('div');el.className='score-pop';el.textContent=text;el.style.left=x+'px';el.style.top='150px';stage.appendChild(el);setTimeout(()=>el.remove(),700)}
+function spawn(){if(!on)return;const el=document.createElement('div');el.className='obstacle';el.textContent=['🚕','☔','🛵','📦'][Math.floor(Math.random()*4)];el.style.left='100%';stage.appendChild(el);let x=stage.clientWidth;const timer=setInterval(()=>{if(!on){clearInterval(timer);el.remove();return}x-=7;el.style.left=x+'px';const pr=player.getBoundingRect?player.getBoundingRect():player.getBoundingClientRect();const er=el.getBoundingClientRect();if(pr.right>er.left&&pr.left<er.right&&pr.bottom>er.top&&pr.top<er.bottom&&!player.classList.contains('jump')){clearInterval(timer);el.remove();health-=18;stress+=12;stage.classList.add('shake');setTimeout(()=>stage.classList.remove('shake'),300)}else if(x< -60){clearInterval(timer);el.remove();score+=10;pop('+10',x)}},25)}
+function shuffle(){if(!on)return;const cards=$('#cards');cards.innerHTML='';let pool=[...cardData].sort(()=>Math.random-.5).slice(0,3);pool.forEach(c=>{const b=document.createElement('button');b.innerHTML='<b>'+c.n+'</b><br><small>'+c.d+'</small>';b.onclick=()=>{c.fn();stress+=2;score+=5;cards.innerHTML='';update();pop('+5')};cards.appendChild(b)})}
+function task(){if(!on)return;tasks++;score+=25;stress+=7;health-=3;pop('+25',stage.clientWidth*.5);update();if(tasks>=day*6)nextDay()}
+function nextDay(){day++;score+=50;pop('明天！',stage.clientWidth*.45);if(day>3){finish()}else update()}
+function finish(){on=false;clearInterval(spawnTimer);clearInterval(runnerTimer);let rank=health>60&&stress<70?'生存达人':'打工英雄';$('#overlay').classList.remove('hidden');$('#overlay').innerHTML='<h1>三日达成！</h1><p>称号：'+rank+'<br>分数：'+score+'<br>完成任务：'+tasks+'</p><button onclick="location.reload()">再来一次</button>'}
+function start(){on=true;$('#overlay').classList.add('hidden');update();spawnTimer=setInterval(spawn,1800);runnerTimer=setInterval(()=>{if(on){score+=1;update()}},1000)}
+$('#start').onclick=start;$('#jump').onclick=jump;$('#task').onclick=task;$('#shuffle').onclick=shuffle;document.addEventListener('keydown',e=>{if(e.code==='Space'){e.prevent;jump()}if(e.key.toLowerCase()==='t')task();if(e.key.toLowerCase()==='c')shuffle()});
+</script>
+</body>
+</html>
